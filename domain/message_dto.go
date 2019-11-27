@@ -1,4 +1,4 @@
-package messages
+package domain
 
 import (
 	"efficient-api/utils/error_utils"

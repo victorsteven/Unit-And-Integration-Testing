@@ -7,6 +7,5 @@ import (
 
 func main(){
 	fmt.Println("Welcome to the app")
-	//messages_db.Mine()
 	app.StartApp()
 }

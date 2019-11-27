@@ -1,7 +1,7 @@
 package services
 
 import (
-	"efficient-api/domain/messages"
+	"efficient-api/domain"
 	"efficient-api/utils/error_utils"
 	"time"
 )
@@ -13,25 +13,26 @@ var (
 type messagesService struct {}
 
 type messageServiceInterface interface {
-	GetMessage(int64) (*messages.Message, error_utils.MessageErr)
-	CreateMessage(messages.Message) (*messages.Message, error_utils.MessageErr)
+	GetMessage(int64) (*domain.Message, error_utils.MessageErr)
+	CreateMessage(*domain.Message) (*domain.Message, error_utils.MessageErr)
 }
 
-func (m *messagesService) GetMessage(msgId int64) (*messages.Message, error_utils.MessageErr) {
-	message := &messages.Message{Id: msgId}
-	if err := message.Get(); err != nil {
+func (m *messagesService) GetMessage(msgId int64) (*domain.Message, error_utils.MessageErr) {
+	message, err := domain.MessageRepo.Get(msgId);
+	if err != nil {
 		return nil, err
 	}
 	return message, nil
 }
 
-func (m *messagesService) CreateMessage(message messages.Message) (*messages.Message, error_utils.MessageErr) {
+func (m *messagesService) CreateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
 	if err := message.Validate(); err != nil {
 		return nil, err
 	}
 	message.CreatedAt =  time.Now()
-	if err := message.Create(); err != nil {
+	message, err := domain.MessageRepo.Create(message);
+	if err != nil {
 		return nil, err
 	}
-	return &message, nil
+	return message, nil
 }

@@ -1,12 +1,13 @@
 package controllers
 
 import (
-	"efficient-api/domain/messages"
+	"efficient-api/domain"
 	"efficient-api/services"
 	"efficient-api/utils/error_utils"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
-	"github.com/gin-gonic/gin"
 )
 
 //type messagesInterface interface {
@@ -30,6 +31,7 @@ func  GetMessage(c *gin.Context) {
 		c.JSON(err.Status(), err)
 		return
 	}
+	fmt.Println("THIS IS THE CONTROLLER")
 	message, getErr := services.MessagesService.GetMessage(msgId)
 	if getErr != nil {
 		c.JSON(getErr.Status(), getErr)
@@ -39,16 +41,20 @@ func  GetMessage(c *gin.Context) {
 }
 
 func CreateMessage(c *gin.Context) {
-	var message messages.Message
+	var message domain.Message
 	if err := c.ShouldBindJSON(&message); err != nil {
 		theErr := error_utils.NewBadRequestError("invalid json body")
 		c.JSON(theErr.Status(), theErr)
 		return
 	}
-	msg, err := services.MessagesService.CreateMessage(message)
+	msg, err := services.MessagesService.CreateMessage(&message)
 	if err != nil {
 		c.JSON(err.Status(), err)
 		return
 	}
 	c.JSON(http.StatusCreated, msg)
+}
+
+func Ping(c *gin.Context) {
+	c.JSON(http.StatusOK,  "This is the route")
 }
