@@ -6,22 +6,38 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
+	"database/sql"
 )
 
-import "database/sql"
+var (
+	Client *sql.DB //let assign the users db once here
+)
 
-type dbConnection interface {
 
-}
+//type dbConnection interface {
+//
+//}
+//
+//var (
+//	DBConnect dbConnection = &DbClient{}
+//)
+//
+//type DbClient struct {
+//	DB *sql.DB
+//}
 
-type dbClient struct {
-	db *sql.DB
-}
+//func (d *DbClient) Connect(ctx context.Context) (*sql.Conn, error) {
+//	c, err := d.DB.Conn(ctx)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return c, nil
+//}
 
 //We can use this function both in our test and our actual database connection
-func NewDBConnection(db *sql.DB) dbConnection {
-	return &dbClient{db:db}
-}
+//func NewDBConnection(db *sql.DB) dbConnection {
+//	return &DbClient{DB :db}
+//}
 
 func init(){
 	if err := godotenv.Load(); err != nil {
@@ -36,12 +52,12 @@ func init(){
 	db_url := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", host, port, username, database, password)
 
 	var err error
-	var connect dbClient
-	connect.db, err = sql.Open("postgres", db_url)
+	//var connect DbClient
+	Client, err = sql.Open("postgres", db_url)
 	if err != nil {
 		panic(err)
 	}
-	if err = connect.db.Ping(); err != nil {
+	if err = Client.Ping(); err != nil {
 		panic(err)
 	}
 	log.Println("database successfully configured")

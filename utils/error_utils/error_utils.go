@@ -52,3 +52,11 @@ func NewApiErrFromBytes(body []byte) (MessageErr, error) {
 	}
 	return &result, nil
 }
+
+func NewInternalServerError(message string) MessageErr {
+	return &messageErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusInternalServerError,
+		ErrError:   "server_error",
+	}
+}
