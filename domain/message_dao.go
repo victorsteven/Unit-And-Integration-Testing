@@ -1,23 +1,22 @@
 package domain
 
 import (
+	"database/sql"
 	"efficient-api/utils/error_utils"
-	_ "github.com/lib/pq"
 	"fmt"
 	_ "github.com/lib/pq"
 	"log"
-	"database/sql"
 )
 
 var (
-	MessageRepo messageRepoInterface = &messageRepo{}
+	MessageRepo MessageRepoInterface = &messageRepo{}
 )
 
 const (
 	queryGetMessage = "SELECT id, title, body, created_at FROM messages WHERE id=$1;"
 	queryInsertMessage = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3) RETURNING id;"
 )
-type messageRepoInterface interface {
+type MessageRepoInterface interface {
 	Get(int64) (*Message, error_utils.MessageErr)
 	Create(*Message) (*Message, error_utils.MessageErr)
 	Initialize(string, string, string, string, string, string)
@@ -38,7 +37,7 @@ func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, 
 	}
 }
 
-func NewMessageRepository(db *sql.DB) messageRepoInterface {
+func NewMessageRepository(db *sql.DB) MessageRepoInterface {
 	return &messageRepo{db: db}
 }
 

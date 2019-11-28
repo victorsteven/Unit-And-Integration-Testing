@@ -57,6 +57,6 @@ func NewInternalServerError(message string) MessageErr {
 	return &messageErr{
 		ErrMessage: message,
 		ErrStatus:  http.StatusInternalServerError,
-		ErrError:   "server_error",
+		ErrError:   "server_error_message",
 	}
 }
