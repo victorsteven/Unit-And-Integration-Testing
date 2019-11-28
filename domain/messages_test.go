@@ -15,7 +15,7 @@ func TestMessageRepo_Get(t *testing.T) {
 	defer db.Close()
 	s := NewMessageRepository(db)
 	created_at := time.Now()
-	var msgId int64
+	//var msgId int64
 
 	tests := []struct{
 		name string
@@ -26,12 +26,14 @@ func TestMessageRepo_Get(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			//When everything works as expected
 			name: "OK",
 			s:    s,
-			msgId: msgId,
+			msgId: 1,
 			mock: func() {
+				//We added one row
 				rows := sqlmock.NewRows([]string{"Id", "Title", "Body", "CreatedAt"}).AddRow(1, "title", "body", created_at)
-				mock.ExpectPrepare("SELECT (.+) FROM messages").ExpectQuery().WillReturnRows(rows)
+				mock.ExpectPrepare("SELECT (.+) FROM messages").ExpectQuery().WithArgs(1).WillReturnRows(rows)
 			},
 			want: &Message{
 				Id:        1,
@@ -40,15 +42,42 @@ func TestMessageRepo_Get(t *testing.T) {
 				CreatedAt: created_at,
 			},
 		},
+		{
+			//When the role tried to access is not found
+			name: "Not Found",
+			s: s,
+			msgId: 1,
+			mock: func() {
+				rows := sqlmock.NewRows([]string{"Id", "Title", "Body", "CreatedAt"}) //observe that we didnt add any role here
+				mock.ExpectPrepare("SELECT (.+) FROM messages").ExpectQuery().WithArgs(1).WillReturnRows(rows)
+			},
+			wantErr: true,
+		},
+		{
+			//When invalid statement is provided, ie the SQL syntax is wrong(in this case, we provided a wrong database)
+			name: "Invalid Prepare",
+			s: s,
+			msgId: 1,
+			mock: func() {
+				rows := sqlmock.NewRows([]string{"Id", "Title", "Body", "CreatedAt"}).AddRow(1, "title", "body", created_at)
+				mock.ExpectPrepare("SELECT (.+) FROM wrong_table").ExpectQuery().WithArgs(1).WillReturnRows(rows)
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mock()
 			got, err := tt.s.Get(tt.msgId)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Get() error new = %v, wantErr %v", err.Message(), tt.wantErr)
+				t.Errorf("Get() error new = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			//if err != nil {
+			//	fmt.Println("this is the generic error: ", err.Message())
+			//	fmt.Println("this is the generic error status: ", err.Status())
+			//	fmt.Println("this is the generic error error: ", err.Error())
+			//}
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Get() = %v, want %v", got, tt.want)
 			}
