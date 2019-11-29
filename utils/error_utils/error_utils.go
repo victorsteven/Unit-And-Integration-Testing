@@ -41,6 +41,13 @@ func NewBadRequestError(message string) MessageErr {
 	return &messageErr{
 		ErrMessage: message,
 		ErrStatus:  http.StatusBadRequest,
+		ErrError:   "bad_request",
+	}
+}
+func NewUnprocessibleEntityError(message string) MessageErr {
+	return &messageErr{
+		ErrMessage: message,
+		ErrStatus:  http.StatusUnprocessableEntity,
 		ErrError:   "invalid_request",
 	}
 }
