@@ -38,6 +38,16 @@ func GetMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, message)
 }
 
+func GetAllMessages(c *gin.Context) {
+	messages, getErr := services.MessagesService.GetAllMessages()
+	if getErr != nil {
+		c.JSON(getErr.Status(), getErr)
+		return
+	}
+	c.JSON(http.StatusOK, messages)
+}
+
+
 func CreateMessage(c *gin.Context) {
 	var message domain.Message
 	if err := c.ShouldBindJSON(&message); err != nil {

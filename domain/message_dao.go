@@ -18,6 +18,7 @@ const (
 	queryInsertMessage = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
 	queryUpdateMessage = "UPDATE messages SET title=?, body=? WHERE id=?;"
 	queryDeleteMessage = "DELETE FROM messages WHERE id=?;"
+	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
 )
 
 type MessageRepoInterface interface {
@@ -25,6 +26,7 @@ type MessageRepoInterface interface {
 	Create(*Message) (*Message, error_utils.MessageErr)
 	Update(*Message) (*Message, error_utils.MessageErr)
 	Delete(int64) error_utils.MessageErr
+	GetAll() ([]Message, error_utils.MessageErr)
 	Initialize(string, string, string, string, string, string)
 }
 type messageRepo struct {
@@ -33,8 +35,6 @@ type messageRepo struct {
 
 func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
 	var err error
-	//DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", DbHost, DbPort, DbUser, DbName, DbPassword)
-
 	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
 
 	mr.db, err = sql.Open(Dbdriver, DBURL)
@@ -63,6 +63,34 @@ func (mr *messageRepo) Get(messageId int64) (*Message, error_utils.MessageErr) {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to get message: %s", getError.Error()))
 	}
 	return &msg, nil
+}
+
+func (mr *messageRepo) GetAll() ([]Message, error_utils.MessageErr) {
+	stmt, err := mr.db.Prepare(queryGetAllMessages)
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to prepare all messages: %s", err.Error()))
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to get users: %s", err.Error()))
+	}
+	defer rows.Close()
+
+	results := make([]Message, 0)
+
+	for rows.Next() {
+		var msg Message
+		if getError := rows.Scan(&msg.Id, &msg.Title, &msg.Body, &msg.CreatedAt); getError != nil {
+			return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to get message: %s", getError.Error()))
+		}
+		results = append(results, msg)
+	}
+	if len(results) == 0 {
+		return nil, error_utils.NewNotFoundError("no records found")
+	}
+	return results, nil
 }
 
 func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {

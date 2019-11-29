@@ -17,6 +17,7 @@ type messageServiceInterface interface {
 	CreateMessage(*domain.Message) (*domain.Message, error_utils.MessageErr)
 	UpdateMessage(*domain.Message) (*domain.Message, error_utils.MessageErr)
 	DeleteMessage(int64) error_utils.MessageErr
+	GetAllMessages() ([]domain.Message, error_utils.MessageErr)
 }
 
 func (m *messagesService) GetMessage(msgId int64) (*domain.Message, error_utils.MessageErr) {
@@ -25,6 +26,14 @@ func (m *messagesService) GetMessage(msgId int64) (*domain.Message, error_utils.
 		return nil, err
 	}
 	return message, nil
+}
+
+func (m *messagesService) GetAllMessages() ([]domain.Message, error_utils.MessageErr) {
+	messages, err := domain.MessageRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
 }
 
 func (m *messagesService) CreateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
