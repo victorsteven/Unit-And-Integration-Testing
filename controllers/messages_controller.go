@@ -53,6 +53,40 @@ func CreateMessage(c *gin.Context) {
 	c.JSON(http.StatusCreated, msg)
 }
 
+func UpdateMessage(c *gin.Context) {
+	msgId, err := getMessageId(c.Param("message_id"))
+	if err != nil {
+		c.JSON(err.Status(), err)
+		return
+	}
+	var message domain.Message
+	if err := c.ShouldBindJSON(&message); err != nil {
+		theErr := error_utils.NewUnprocessibleEntityError("invalid json body")
+		c.JSON(theErr.Status(), theErr)
+		return
+	}
+	message.Id = msgId
+	msg, err := services.MessagesService.UpdateMessage(&message)
+	if err != nil {
+		c.JSON(err.Status(), err)
+		return
+	}
+	c.JSON(http.StatusOK, msg)
+}
+
+func DeleteMessage(c *gin.Context) {
+	msgId, err := getMessageId(c.Param("message_id"))
+	if err != nil {
+		c.JSON(err.Status(), err)
+		return
+	}
+	if err := services.MessagesService.DeleteMessage(msgId); err != nil {
+		c.JSON(err.Status(), err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 //func Ping(c *gin.Context) {
 //	c.JSON(http.StatusOK, "This is the route")
 //}

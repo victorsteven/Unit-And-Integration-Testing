@@ -16,11 +16,15 @@ var (
 const (
 	queryGetMessage    = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
 	queryInsertMessage = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
+	queryUpdateMessage = "UPDATE messages SET title=?, body=? WHERE id=?;"
+	queryDeleteMessage = "DELETE FROM messages WHERE id=?;"
 )
 
 type MessageRepoInterface interface {
 	Get(int64) (*Message, error_utils.MessageErr)
 	Create(*Message) (*Message, error_utils.MessageErr)
+	Update(*Message) (*Message, error_utils.MessageErr)
+	Delete(int64) error_utils.MessageErr
 	Initialize(string, string, string, string, string, string)
 }
 type messageRepo struct {
@@ -79,4 +83,32 @@ func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	msg.Id = msgId
 
 	return msg, nil
+}
+
+func (mr *messageRepo) Update(msg *Message) (*Message, error_utils.MessageErr) {
+	stmt, err := mr.db.Prepare(queryUpdateMessage)
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to prepare user to update: %s", err.Error()))
+	}
+	defer stmt.Close()
+
+	result, updateErr := stmt.Exec(msg.Title, msg.Body, msg.Id)
+	fmt.Println("this is the result: ", result)
+	if updateErr != nil {
+		return nil, error_utils.NewInternalServerError("error when trying to update message first")
+	}
+	return msg, nil
+}
+
+func (mr *messageRepo) Delete(msgId int64) error_utils.MessageErr {
+	stmt, err := mr.db.Prepare(queryDeleteMessage)
+	if err != nil {
+		return error_utils.NewInternalServerError(fmt.Sprintf("error when trying to delete message: %s", err.Error()))
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(msgId); err != nil {
+		return error_utils.NewInternalServerError(fmt.Sprintf("error when trying to delete message %s", err.Error()))
+	}
+	return nil
 }
