@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"efficient-api/domain"
 	"efficient-api/services"
 	"efficient-api/utils/error_utils"
@@ -52,7 +53,6 @@ func TestGetMessage_Success(t *testing.T) {
 	assert.EqualValues(t, 1, message.Id)
 	assert.EqualValues(t, "the title", message.Title)
 	assert.EqualValues(t, "the body", message.Body)
-
 }
 
 //When an invalid id id passed. No need to mock the service here because we will never call it
@@ -91,7 +91,6 @@ func TestGetMessage_Message_Not_Found(t *testing.T) {
 	assert.EqualValues(t, http.StatusNotFound, apiErr.Status())
 	assert.EqualValues(t, "message not found", apiErr.Message())
 	assert.EqualValues(t, "not_found", apiErr.Error())
-
 }
 
 //We will call the service method here, so we need to mock it
@@ -116,6 +115,100 @@ func TestGetMessage_Message_Database_Error(t *testing.T) {
 	assert.EqualValues(t, "server_error", apiErr.Error())
 }
 
-func TestCreateMessage(t *testing.T) {
 
+func TestCreateMessage(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "the title",
+			Body:      "the body",
+		}, nil
+	}
+	jsonBody := `{"title": "the title", "body": "the body"}`
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPost, "/messages", bytes.NewBufferString(jsonBody))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.POST("/messages", CreateMessage)
+	r.ServeHTTP(rr, req)
+
+	var message domain.Message
+	err = json.Unmarshal(rr.Body.Bytes(), &message)
+	assert.Nil(t, err)
+	assert.NotNil(t, message)
+	assert.EqualValues(t, http.StatusCreated, rr.Code)
+	assert.EqualValues(t, 1, message.Id)
+	assert.EqualValues(t, "the title", message.Title)
+	assert.EqualValues(t, "the body", message.Body)
+}
+
+func TestCreateMessage_Invalid_Json(t *testing.T) {
+	inputJson := `{"title": 1234, "body": "the body"}`
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPost, "/messages", bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.POST("/messages", CreateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "invalid json body", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
+}
+
+func TestCreateMessage_Empty_Body(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewUnprocessibleEntityError("Please enter a valid body")
+	}
+	inputJson := `{"title": "the title", "body": ""}`
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPost, "/messages", bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.POST("/messages", CreateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "Please enter a valid body", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
+}
+
+func TestCreateMessage_Empty_Title(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewUnprocessibleEntityError("Please enter a valid title")
+	}
+	inputJson := `{"title": "", "body": "the body"}`
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPost, "/messages", bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.POST("/messages", CreateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "Please enter a valid title", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
 }
