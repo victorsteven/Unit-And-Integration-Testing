@@ -10,27 +10,19 @@ import (
 	"time"
 )
 
-//type methodTypes struct {
-//	getMessage func(messageId int64) (*domain.Message, error_utils.MessageErr)
-//	createMessage func(msg *domain.Message) (*domain.Message, error_utils.MessageErr)
-//}
-//var theUtil methodTypes
-
 var (
 	tm = time.Now()
-	getMessage func(messageId int64) (*domain.Message, error_utils.MessageErr)
-	createMessage func(msg *domain.Message) (*domain.Message, error_utils.MessageErr)
+	getMessageDomain func(messageId int64) (*domain.Message, error_utils.MessageErr)
+	createMessageDomain func(msg *domain.Message) (*domain.Message, error_utils.MessageErr)
 )
 
 type getDBMock struct {}
 
 func (m *getDBMock) Get(messageId int64) (*domain.Message, error_utils.MessageErr){
-	//return theUtil.getMessage(messageId)
-	return getMessage(messageId)
-
+	return getMessageDomain(messageId)
 }
 func (m *getDBMock) Create(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
-	return createMessage(msg)
+	return createMessageDomain(msg)
 }
 func (m *getDBMock) Initialize(string, string, string, string, string, string){}
 
@@ -40,7 +32,7 @@ func (m *getDBMock) Initialize(string, string, string, string, string, string){}
 ///////////////////////////////////////////////////////////////
 func TestMessagesService_GetMessage_Success(t *testing.T) {
 	domain.MessageRepo = &getDBMock{} //this is where we swapped the functionality
-	getMessage = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+	getMessageDomain = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
 		return &domain.Message{
 			Id:        1,
 			Title:     "the title",
@@ -62,7 +54,7 @@ func TestMessagesService_GetMessage_Success(t *testing.T) {
 func TestMessagesService_GetMessage_NotFoundID(t *testing.T) {
 	domain.MessageRepo = &getDBMock{}
 
-	getMessage = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+	getMessageDomain = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
 		return nil, error_utils.NewNotFoundError("the id is not found")
 	}
 	msg, err := MessagesService.GetMessage(1)
@@ -84,7 +76,7 @@ func TestMessagesService_GetMessage_NotFoundID(t *testing.T) {
 //Here we call the domain method, so we must mock it
 func TestMessagesService_CreateMessage_Success(t *testing.T) {
 	domain.MessageRepo = &getDBMock{}
-	createMessage  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
+	createMessageDomain  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
 		return &domain.Message{
 			Id:        1,
 			Title:     "the title",
@@ -153,7 +145,7 @@ func TestMessagesService_CreateMessage_Invalid_Request(t *testing.T) {
 //For now, we have 100% coverage on the "CreateMessage" method in the service
 func TestMessagesService_CreateMessage_Failure(t *testing.T) {
 	domain.MessageRepo = &getDBMock{}
-	createMessage  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
+	createMessageDomain  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
 		return nil, error_utils.NewInternalServerError("title already taken")
 	}
 	request := &domain.Message{

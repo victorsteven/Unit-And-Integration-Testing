@@ -20,7 +20,7 @@ import (
 func getMessageId(msgIdParam string) (int64, error_utils.MessageErr) {
 	msgId, msgErr := strconv.ParseInt(msgIdParam, 10, 64)
 	if msgErr != nil {
-		return 0, error_utils.NewBadRequestError("message id whould be a number")
+		return 0, error_utils.NewBadRequestError("message id should be a number")
 	}
 	return msgId, nil
 }
