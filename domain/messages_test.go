@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
 	"reflect"
@@ -122,6 +123,45 @@ func TestMessageRepo_Create(t *testing.T) {
 				CreatedAt: tm,
 			},
 		},
+		{
+			name: "Empty title",
+			s: s,
+			request: &Message{
+				Title:     "title",
+				Body:      "body",
+				CreatedAt: tm,
+			},
+			mock: func(){
+				mock.ExpectPrepare("INSERT INTO messages").ExpectExec().WithArgs("title", "body", tm).WillReturnError(errors.New("empty title"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "Empty body",
+			s: s,
+			request: &Message{
+				Title:     "title",
+				Body:      "body",
+				CreatedAt: tm,
+			},
+			mock: func(){
+				mock.ExpectPrepare("INSERT INTO messages").ExpectExec().WithArgs("title", "body", tm).WillReturnError(errors.New("empty body"))
+			},
+			wantErr: true,
+		},{
+			name: "Invalid SQL query",
+			s: s,
+			request: &Message{
+				Title:     "title",
+				Body:      "body",
+				CreatedAt: tm,
+			},
+			mock: func(){
+				//Instead of using "INSERT", we used "INSETER"
+				mock.ExpectPrepare("INSERTER INTO messages").ExpectExec().WithArgs("title", "body", tm).WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -132,6 +172,13 @@ func TestMessageRepo_Create(t *testing.T) {
 				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			if err != nil {
+				fmt.Println("this is the generic error: ", err.Message())
+				fmt.Println("this is the generic error status: ", err.Status())
+				fmt.Println("this is the generic error error: ", err.Error())
+			}
+
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Create() = %v, want %v", got, tt.want)
 			}
