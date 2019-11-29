@@ -21,7 +21,7 @@ func init() {
 	}
 }
 
-func StartApp(){
+func StartApp() {
 
 	dbdriver := os.Getenv("DBDRIVER")
 	username := os.Getenv("USERNAME")

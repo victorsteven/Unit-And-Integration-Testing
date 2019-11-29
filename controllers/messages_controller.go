@@ -25,7 +25,7 @@ func getMessageId(msgIdParam string) (int64, error_utils.MessageErr) {
 	return msgId, nil
 }
 
-func  GetMessage(c *gin.Context) {
+func GetMessage(c *gin.Context) {
 	msgId, err := getMessageId(c.Param("message_id"))
 	if err != nil {
 		c.JSON(err.Status(), err)
@@ -56,5 +56,5 @@ func CreateMessage(c *gin.Context) {
 }
 
 func Ping(c *gin.Context) {
-	c.JSON(http.StatusOK,  "This is the route")
+	c.JSON(http.StatusOK, "This is the route")
 }

@@ -12,9 +12,9 @@ type MessageErr interface {
 }
 
 type messageErr struct {
-	ErrMessage string  `json:"message"`
-	ErrStatus  int           `json:"status"`
-	ErrError   string        `json:"error"`
+	ErrMessage string `json:"message"`
+	ErrStatus  int    `json:"status"`
+	ErrError   string `json:"error"`
 }
 
 func (e *messageErr) Error() string {

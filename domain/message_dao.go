@@ -5,6 +5,7 @@ import (
 	"efficient-api/utils/error_utils"
 	"fmt"
 	_ "github.com/lib/pq"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
 )
 
@@ -13,9 +14,10 @@ var (
 )
 
 const (
-	queryGetMessage = "SELECT id, title, body, created_at FROM messages WHERE id=$1;"
-	queryInsertMessage = "INSERT INTO messages(title, body, created_at) VALUES($1, $2, $3) RETURNING id;"
+	queryGetMessage    = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
+	queryInsertMessage = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
 )
+
 type MessageRepoInterface interface {
 	Get(int64) (*Message, error_utils.MessageErr)
 	Create(*Message) (*Message, error_utils.MessageErr)
@@ -27,13 +29,16 @@ type messageRepo struct {
 
 func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) {
 	var err error
-	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", DbHost, DbPort, DbUser, DbName, DbPassword)
+	//DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s", DbHost, DbPort, DbUser, DbName, DbPassword)
+
+	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
+
 	mr.db, err = sql.Open(Dbdriver, DBURL)
 	if err != nil {
 		fmt.Printf("Cannot connect to %s database", Dbdriver)
 		log.Fatal("This is the error connecting to postgres:", err)
 	} else {
-			fmt.Printf("We are connected to the %s database", Dbdriver)
+		fmt.Printf("We are connected to the %s database", Dbdriver)
 	}
 }
 
@@ -63,11 +68,15 @@ func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	}
 	defer stmt.Close()
 
-	var messageId int64
-	createErr := stmt.QueryRow(msg.Title, msg.Body, msg.CreatedAt).Scan(&messageId)
+	insertResult, createErr := stmt.Exec(msg.Title, msg.Body, msg.CreatedAt)
 	if createErr != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", createErr.Error()))
 	}
-	msg.Id = messageId
+	msgId, err := insertResult.LastInsertId()
+	if err != nil {
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", err.Error()))
+	}
+	msg.Id = msgId
+
 	return msg, nil
 }

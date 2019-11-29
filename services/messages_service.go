@@ -10,7 +10,7 @@ var (
 	MessagesService messageServiceInterface = &messagesService{}
 )
 
-type messagesService struct {}
+type messagesService struct{}
 
 type messageServiceInterface interface {
 	GetMessage(int64) (*domain.Message, error_utils.MessageErr)
@@ -18,7 +18,7 @@ type messageServiceInterface interface {
 }
 
 func (m *messagesService) GetMessage(msgId int64) (*domain.Message, error_utils.MessageErr) {
-	message, err := domain.MessageRepo.Get(msgId);
+	message, err := domain.MessageRepo.Get(msgId)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +29,8 @@ func (m *messagesService) CreateMessage(message *domain.Message) (*domain.Messag
 	if err := message.Validate(); err != nil {
 		return nil, err
 	}
-	message.CreatedAt =  time.Now()
-	message, err := domain.MessageRepo.Create(message);
+	message.CreatedAt = time.Now()
+	message, err := domain.MessageRepo.Create(message)
 	if err != nil {
 		return nil, err
 	}
