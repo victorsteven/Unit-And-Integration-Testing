@@ -394,3 +394,153 @@ func TestUpdateMessage_Error_Updating(t *testing.T) {
 // End of "UpdateMessage" test cases
 ///////////////////////////////////////////////////////////////
 
+
+
+///////////////////////////////////////////////////////////////
+// Start of "DeleteMessage" test cases
+///////////////////////////////////////////////////////////////
+func TestDeleteMessage_Success(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	deleteMessageService = func(msg int64) error_utils.MessageErr {
+		return nil
+	}
+	r := gin.Default()
+	id := "1"
+	req, err := http.NewRequest(http.MethodDelete, "/messages/"+id, nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.DELETE("/messages/:message_id", DeleteMessage)
+	r.ServeHTTP(rr, req)
+
+	var response = make(map[string]string)
+	theErr := json.Unmarshal(rr.Body.Bytes(), &response)
+	if theErr != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	assert.EqualValues(t, http.StatusOK, rr.Code)
+	assert.EqualValues(t, response["status"], "deleted")
+}
+
+//We wont call the service Delete method here, so no need to mock it
+func TestDeleteMessage_Invalid_Id(t *testing.T) {
+
+	r := gin.Default()
+	id := "abc"
+	req, err := http.NewRequest(http.MethodDelete, "/messages/"+id, nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.DELETE("/messages/:message_id", DeleteMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusBadRequest, apiErr.Status())
+	assert.EqualValues(t, "message id should be a number", apiErr.Message())
+	assert.EqualValues(t, "bad_request", apiErr.Error())
+}
+
+//If for any reason, our update didnt happen(e.g server error, etc), This is an error from the service, but the controller conditions where met.
+//Maybe the message does not exist, or the server timeout
+func TestDeleteMessage_Failure(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	deleteMessageService = func(msg int64) error_utils.MessageErr {
+		return error_utils.NewInternalServerError("error deleting message")
+	}
+	r := gin.Default()
+	id := "1"
+	req, err := http.NewRequest(http.MethodDelete, "/messages/"+id, nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.DELETE("/messages/:message_id", DeleteMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusInternalServerError, apiErr.Status())
+	assert.EqualValues(t, "error deleting message", apiErr.Message())
+	assert.EqualValues(t, "server_error", apiErr.Error())
+}
+///////////////////////////////////////////////////////////////
+// End of "DeleteMessage" test cases
+///////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////
+// Start of "GetAllMessages" test cases
+///////////////////////////////////////////////////////////////
+func TestGetAllMessages_Success(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	getAllMessageService = func() ([]domain.Message, error_utils.MessageErr) {
+		 return []domain.Message{
+			{
+				Id:        1,
+				Title:     "first title",
+				Body:      "first body",
+			},
+			{
+				Id:        2,
+				Title:     "second title",
+				Body:      "second body",
+			},
+		}, nil
+	}
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodGet, "/messages", nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.GET("/messages", GetAllMessages)
+	r.ServeHTTP(rr, req)
+
+	var messages []domain.Message
+	theErr := json.Unmarshal(rr.Body.Bytes(), &messages)
+	if theErr != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	assert.Nil(t, err)
+	assert.NotNil(t, messages)
+	assert.EqualValues(t, messages[0].Id, 1)
+	assert.EqualValues(t, messages[0].Title, "first title")
+	assert.EqualValues(t, messages[0].Body, "first body")
+	assert.EqualValues(t, messages[1].Id, 2)
+	assert.EqualValues(t, messages[1].Title, "second title")
+	assert.EqualValues(t, messages[1].Body, "second body")
+}
+
+//For any reason we could not get the messages
+func TestGetAllMessages_Failure(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	getAllMessageService = func() ([]domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewInternalServerError("error getting messages")
+	}
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodGet, "/messages", nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.GET("/messages", GetAllMessages)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, "error getting messages", apiErr.Message())
+	assert.EqualValues(t, "server_error", apiErr.Error())
+	assert.EqualValues(t, http.StatusInternalServerError, apiErr.Status())
+}
