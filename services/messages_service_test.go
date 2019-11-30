@@ -18,9 +18,29 @@ var (
 	deleteMessageDomain func(messageId int64) error_utils.MessageErr
 	getAllMessagesDomain func() ([]domain.Message, error_utils.MessageErr)
 
+	//getMessageService func(msgId int64) (*domain.Message, error_utils.MessageErr)
+	//updateMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)
+
 )
 
 type getDBMock struct {}
+type serviceMock struct {}
+
+//func (sm *serviceMock) GetMessage(msgId int64) (*domain.Message, error_utils.MessageErr) {
+//	return getMessageService(msgId)
+//}
+//func (sm *serviceMock) UpdateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+//	return updateMessageService(message)
+//}
+//func (sm *serviceMock) CreateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+//	return nil, nil
+//}
+//func (sm *serviceMock) GetAllMessages() ([]domain.Message, error_utils.MessageErr) {
+//	return nil, nil
+//}
+//func (sm *serviceMock) DeleteMessage(msgId int64) error_utils.MessageErr {
+//	return nil
+//}
 
 func (m *getDBMock) Get(messageId int64) (*domain.Message, error_utils.MessageErr){
 	return getMessageDomain(messageId)
@@ -67,6 +87,7 @@ func TestMessagesService_GetMessage_Success(t *testing.T) {
 //Test the not found functionality
 func TestMessagesService_GetMessage_NotFoundID(t *testing.T) {
 	domain.MessageRepo = &getDBMock{}
+	//MessagesService = &serviceMock{}
 
 	getMessageDomain = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
 		return nil, error_utils.NewNotFoundError("the id is not found")
@@ -184,3 +205,68 @@ func TestMessagesService_CreateMessage_Failure(t *testing.T) {
 ///////////////////////////////////////////////////////////////
 // Start of	"UpdateMessage" test cases
 ///////////////////////////////////////////////////////////////
+func TestMessagesService_UpdateMessage_Success(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "former title",
+			Body:      "former body",
+		}, nil
+	}
+	updateMessageDomain  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
+		return &domain.Message{
+			Id:        1,
+			Title:     "the title update",
+			Body:      "the body update",
+		}, nil
+	}
+	request := &domain.Message{
+		Title:     "the title update",
+		Body:      "the body update",
+	}
+	msg, err := MessagesService.UpdateMessage(request)
+	assert.NotNil(t, msg)
+	assert.Nil(t, err)
+	assert.EqualValues(t, 1, msg.Id)
+	assert.EqualValues(t, "the title update", msg.Title)
+	assert.EqualValues(t, "the body update", msg.Body)
+}
+
+//This is a validation test, it wont call the domain methods, so, we dont need to mock them.
+//It is also a table
+func TestMessagesService_UpdateMessage_Empty_Title_Or_Body(t *testing.T) {
+	tests := []struct {
+		request *domain.Message
+		statusCode int
+		errMsg string
+		errErr string
+	}{
+		{
+			request: &domain.Message{
+				Title:     "",
+				Body:      "the body",
+			},
+			statusCode: http.StatusUnprocessableEntity,
+			errMsg: "Please enter a valid title",
+			errErr: "invalid_request",
+		},
+		{
+			request: &domain.Message{
+				Title:     "the title",
+				Body:      "",
+			},
+			statusCode: http.StatusUnprocessableEntity,
+			errMsg: "Please enter a valid body",
+			errErr: "invalid_request",
+		},
+	}
+	for _, tt := range tests {
+		msg, err := MessagesService.UpdateMessage(tt.request)
+		assert.Nil(t, msg)
+		assert.NotNil(t, err)
+		assert.EqualValues(t, tt.statusCode, err.Status())
+		assert.EqualValues(t, tt.errMsg, err.Message())
+		assert.EqualValues(t, tt.errErr, err.Error())
+	}
+}

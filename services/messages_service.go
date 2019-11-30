@@ -50,11 +50,11 @@ func (m *messagesService) CreateMessage(message *domain.Message) (*domain.Messag
 
 func (m *messagesService) UpdateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
 
-	current, err := m.GetMessage(message.Id)
-	if err != nil {
+	if err := message.Validate(); err != nil {
 		return nil, err
 	}
-	if err := message.Validate(); err != nil {
+	current, err := domain.MessageRepo.Get(message.Id)
+	if err != nil {
 		return nil, err
 	}
 	current.Title = message.Title
