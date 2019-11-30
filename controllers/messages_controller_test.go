@@ -18,6 +18,9 @@ var (
 	tm = time.Now()
 	getMessageService func(msgId int64) (*domain.Message, error_utils.MessageErr)
 	createMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)
+	updateMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)
+	deleteMessageService func(msgId int64) error_utils.MessageErr
+	getAllMessageService func() ([]domain.Message, error_utils.MessageErr)
 )
 
 type serviceMock struct {}
@@ -28,7 +31,19 @@ func (sm *serviceMock) GetMessage(msgId int64) (*domain.Message, error_utils.Mes
 func (sm *serviceMock) CreateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
 	return createMessageService(message)
 }
+func (sm *serviceMock) UpdateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+	return updateMessageService(message)
+}
+func (sm *serviceMock) DeleteMessage(msgId int64) error_utils.MessageErr {
+	return deleteMessageService(msgId)
+}
+func (sm *serviceMock) GetAllMessages() ([]domain.Message, error_utils.MessageErr) {
+	return getAllMessageService()
+}
 
+///////////////////////////////////////////////////////////////
+// Start of "GetMessage" test cases
+///////////////////////////////////////////////////////////////
 func TestGetMessage_Success(t *testing.T) {
 	services.MessagesService = &serviceMock{}
 	getMessageService = func(msgId int64) (*domain.Message, error_utils.MessageErr) {
@@ -114,9 +129,16 @@ func TestGetMessage_Message_Database_Error(t *testing.T) {
 	assert.EqualValues(t, "database error", apiErr.Message())
 	assert.EqualValues(t, "server_error", apiErr.Error())
 }
+///////////////////////////////////////////////////////////////
+// End of "GetMessage" test cases
+///////////////////////////////////////////////////////////////
 
 
-func TestCreateMessage(t *testing.T) {
+
+///////////////////////////////////////////////////////////////
+// Start of "CreateMessage" test cases
+///////////////////////////////////////////////////////////////
+func TestCreateMessage_Success(t *testing.T) {
 	services.MessagesService = &serviceMock{}
 	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
 		return &domain.Message{
@@ -165,6 +187,7 @@ func TestCreateMessage_Invalid_Json(t *testing.T) {
 	assert.EqualValues(t, "invalid_request", apiErr.Error())
 }
 
+//This test is not really necessary here, because it has been handled in the service test
 func TestCreateMessage_Empty_Body(t *testing.T) {
 	services.MessagesService = &serviceMock{}
 	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
@@ -188,7 +211,7 @@ func TestCreateMessage_Empty_Body(t *testing.T) {
 	assert.EqualValues(t, "Please enter a valid body", apiErr.Message())
 	assert.EqualValues(t, "invalid_request", apiErr.Error())
 }
-
+//This test is not really necessary here, because it has been handled in the service test
 func TestCreateMessage_Empty_Title(t *testing.T) {
 	services.MessagesService = &serviceMock{}
 	createMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
@@ -212,3 +235,162 @@ func TestCreateMessage_Empty_Title(t *testing.T) {
 	assert.EqualValues(t, "Please enter a valid title", apiErr.Message())
 	assert.EqualValues(t, "invalid_request", apiErr.Error())
 }
+///////////////////////////////////////////////////////////////
+// End of "CreateMessage" test cases
+///////////////////////////////////////////////////////////////
+
+
+
+///////////////////////////////////////////////////////////////
+// Start of "UpdateMessage" test cases
+///////////////////////////////////////////////////////////////
+func TestUpdateMessage_Success(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	updateMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "update title",
+			Body:      "update body",
+		}, nil
+	}
+	jsonBody := `{"title": "update title", "body": "update body"}`
+	r := gin.Default()
+	id := "1"
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(jsonBody))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+
+	var message domain.Message
+	err = json.Unmarshal(rr.Body.Bytes(), &message)
+	assert.Nil(t, err)
+	assert.NotNil(t, message)
+	assert.EqualValues(t, http.StatusOK, rr.Code)
+	assert.EqualValues(t, 1, message.Id)
+	assert.EqualValues(t, "update title", message.Title)
+	assert.EqualValues(t, "update body", message.Body)
+}
+
+//We dont need to mock the service method here, because we wont call it
+func TestUpdateMessage_Invalid_Id(t *testing.T) {
+	jsonBody := `{"title": "update title", "body": "update body"}`
+	r := gin.Default()
+	id := "abc"
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(jsonBody))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusBadRequest, apiErr.Status())
+	assert.EqualValues(t, "message id should be a number", apiErr.Message())
+	assert.EqualValues(t, "bad_request", apiErr.Error())
+}
+
+//When for instance an integer is provided instead of a string
+func TestUpdateMessage_Invalid_Json(t *testing.T) {
+	inputJson := `{"title": 1234, "body": "the body"}`
+	r := gin.Default()
+	id := "1"
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "invalid json body", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
+}
+
+
+//This test is not really necessary here, because it has been handled in the service test
+func TestUpdateMessage_Empty_Body(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	updateMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewUnprocessibleEntityError("Please enter a valid body")
+	}
+	inputJson := `{"title": "the title", "body": ""}`
+	id := "1"
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "Please enter a valid body", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
+}
+//This test is not really necessary here, because it has been handled in the service test
+func TestUpdateMessage_Empty_Title(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	updateMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewUnprocessibleEntityError("Please enter a valid title")
+	}
+	inputJson := `{"title": "", "body": "the body"}`
+	id := "1"
+	r := gin.Default()
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(inputJson))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+	assert.EqualValues(t, http.StatusUnprocessableEntity, apiErr.Status())
+	assert.EqualValues(t, "Please enter a valid title", apiErr.Message())
+	assert.EqualValues(t, "invalid_request", apiErr.Error())
+}
+
+//Other errors can happen when we try to update the message
+func TestUpdateMessage_Error_Updating(t *testing.T) {
+	services.MessagesService = &serviceMock{}
+	updateMessageService = func(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewInternalServerError("error when updating message")
+	}
+	jsonBody := `{"title": "update title", "body": "update body"}`
+	r := gin.Default()
+	id := "1"
+	req, err := http.NewRequest(http.MethodPut, "/messages/"+id, bytes.NewBufferString(jsonBody))
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.PUT("/messages/:message_id", UpdateMessage)
+	r.ServeHTTP(rr, req)
+
+	apiErr, err := error_utils.NewApiErrFromBytes(rr.Body.Bytes())
+	assert.Nil(t, err)
+	assert.NotNil(t, apiErr)
+
+	assert.EqualValues(t, http.StatusInternalServerError, apiErr.Status())
+	assert.EqualValues(t, "error when updating message", apiErr.Message())
+	assert.EqualValues(t, "server_error", apiErr.Error())
+}
+///////////////////////////////////////////////////////////////
+// End of "UpdateMessage" test cases
+///////////////////////////////////////////////////////////////
+

@@ -9,13 +9,6 @@ import (
 	"strconv"
 )
 
-//type messagesInterface interface {
-//	Get(*gin.Context)
-//}
-//type messenger struct {
-//	service services.MessageServiceInterface
-//}
-
 func getMessageId(msgIdParam string) (int64, error_utils.MessageErr) {
 	msgId, msgErr := strconv.ParseInt(msgIdParam, 10, 64)
 	if msgErr != nil {
@@ -46,7 +39,6 @@ func GetAllMessages(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, messages)
 }
-
 
 func CreateMessage(c *gin.Context) {
 	var message domain.Message
