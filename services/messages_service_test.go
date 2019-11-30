@@ -270,3 +270,49 @@ func TestMessagesService_UpdateMessage_Empty_Title_Or_Body(t *testing.T) {
 		assert.EqualValues(t, tt.errErr, err.Error())
 	}
 }
+
+//An error can occur when trying to fetch the user to update, anything from a timeout error to a not found error.
+//We need to test for that.
+//Here we checked for 500 error, you can also check for others if you have time.
+func TestMessagesService_UpdateMessage_Failure_Getting_Former_Message(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewInternalServerError("error getting message")
+	}
+	request := &domain.Message{
+		Title:     "the title update",
+		Body:      "the body update",
+	}
+	msg, err := MessagesService.UpdateMessage(request)
+	assert.Nil(t, msg)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "error getting message", err.Message())
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
+	assert.EqualValues(t, "server_error", err.Error())
+}
+
+//We can get the former message, but we might have issues updating it. Here also, we tested using 500, you can also assert other possible failure status
+func TestMessagesService_UpdateMessage_Failure_Updating_Message(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "former title",
+			Body:      "former body",
+		}, nil
+	}
+	updateMessageDomain  = func(msg *domain.Message) (*domain.Message, error_utils.MessageErr){
+		return nil, error_utils.NewInternalServerError("error updating message")
+	}
+	request := &domain.Message{
+		Title:     "the title update",
+		Body:      "the body update",
+	}
+	msg, err := MessagesService.UpdateMessage(request)
+	assert.Nil(t, msg)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "error updating message", err.Message())
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
+	assert.EqualValues(t, "server_error", err.Error())
+}
