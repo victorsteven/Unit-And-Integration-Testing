@@ -68,9 +68,13 @@ func (m *messagesService) UpdateMessage(message *domain.Message) (*domain.Messag
 }
 
 func (m *messagesService) DeleteMessage(msgId int64) error_utils.MessageErr {
-	_, err := m.GetMessage(msgId)
+	msg, err := domain.MessageRepo.Get(msgId)
 	if err != nil {
 		return err
 	}
-	return domain.MessageRepo.Delete(msgId)
+	deleteErr := domain.MessageRepo.Delete(msg.Id)
+	if deleteErr != nil {
+		return deleteErr
+	}
+	return nil
 }

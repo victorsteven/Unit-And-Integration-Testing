@@ -17,30 +17,9 @@ var (
 	updateMessageDomain func(msg *domain.Message) (*domain.Message, error_utils.MessageErr)
 	deleteMessageDomain func(messageId int64) error_utils.MessageErr
 	getAllMessagesDomain func() ([]domain.Message, error_utils.MessageErr)
-
-	//getMessageService func(msgId int64) (*domain.Message, error_utils.MessageErr)
-	//updateMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)
-
 )
 
 type getDBMock struct {}
-type serviceMock struct {}
-
-//func (sm *serviceMock) GetMessage(msgId int64) (*domain.Message, error_utils.MessageErr) {
-//	return getMessageService(msgId)
-//}
-//func (sm *serviceMock) UpdateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
-//	return updateMessageService(message)
-//}
-//func (sm *serviceMock) CreateMessage(message *domain.Message) (*domain.Message, error_utils.MessageErr) {
-//	return nil, nil
-//}
-//func (sm *serviceMock) GetAllMessages() ([]domain.Message, error_utils.MessageErr) {
-//	return nil, nil
-//}
-//func (sm *serviceMock) DeleteMessage(msgId int64) error_utils.MessageErr {
-//	return nil
-//}
 
 func (m *getDBMock) Get(messageId int64) (*domain.Message, error_utils.MessageErr){
 	return getMessageDomain(messageId)
@@ -57,7 +36,6 @@ func (m *getDBMock) Delete(messageId int64) error_utils.MessageErr {
 func (m *getDBMock) GetAll() ([]domain.Message, error_utils.MessageErr) {
 	return getAllMessagesDomain()
 }
-
 func (m *getDBMock) Initialize(string, string, string, string, string, string){}
 
 
@@ -316,3 +294,109 @@ func TestMessagesService_UpdateMessage_Failure_Updating_Message(t *testing.T) {
 	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
 	assert.EqualValues(t, "server_error", err.Error())
 }
+///////////////////////////////////////////////////////////////
+// End of"UpdateMessage" test cases
+///////////////////////////////////////////////////////////////
+
+
+///////////////////////////////////////////////////////////////
+// Start of"DeleteMessage" test cases
+///////////////////////////////////////////////////////////////
+func TestMessagesService_DeleteMessage_Success(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "former title",
+			Body:      "former body",
+		}, nil
+	}
+	deleteMessageDomain = func(messageId int64) error_utils.MessageErr {
+		return nil
+	}
+	err := MessagesService.DeleteMessage(1)
+	assert.Nil(t, err)
+}
+
+//It can range from a 500 error to a 404 error, we didnt mock deleting the message because we will not get there
+func TestMessagesService_DeleteMessage_Error_Getting_Message(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewInternalServerError("Something went wrong getting message")
+	}
+	err := MessagesService.DeleteMessage(1)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "Something went wrong getting message", err.Message())
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
+	assert.EqualValues(t, "server_error", err.Error())
+}
+
+func TestMessagesService_DeleteMessage_Error_Deleting_Message(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getMessageDomain  = func(messageId int64) (*domain.Message, error_utils.MessageErr) {
+		return &domain.Message{
+			Id:        1,
+			Title:     "former title",
+			Body:      "former body",
+		}, nil
+	}
+	deleteMessageDomain = func(messageId int64) error_utils.MessageErr {
+		return error_utils.NewInternalServerError("error deleting message")
+	}
+	err := MessagesService.DeleteMessage(1)
+	assert.NotNil(t, err)
+	assert.EqualValues(t, "error deleting message", err.Message())
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
+	assert.EqualValues(t, "server_error", err.Error())
+}
+///////////////////////////////////////////////////////////////
+// End of "DeleteMessage" test cases
+///////////////////////////////////////////////////////////////
+
+
+
+///////////////////////////////////////////////////////////////
+// Start of "GetAllMessage" test cases
+///////////////////////////////////////////////////////////////
+func TestMessagesService_GetAllMessages(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getAllMessagesDomain  = func() ([]domain.Message, error_utils.MessageErr) {
+		return []domain.Message{
+			{
+				Id:        1,
+				Title:     "first title",
+				Body:      "first body",
+			},
+			{
+				Id:        2,
+				Title:     "second title",
+				Body:      "second body",
+			},
+		}, nil
+	}
+	messages, err := MessagesService.GetAllMessages()
+	assert.Nil(t, err)
+	assert.NotNil(t, messages)
+	assert.EqualValues(t, messages[0].Id, 1)
+	assert.EqualValues(t, messages[0].Title, "first title")
+	assert.EqualValues(t, messages[0].Body, "first body")
+	assert.EqualValues(t, messages[1].Id, 2)
+	assert.EqualValues(t, messages[1].Title, "second title")
+	assert.EqualValues(t, messages[1].Body, "second body")
+}
+
+func TestMessagesService_GetAllMessages_Error_Getting_Messages(t *testing.T) {
+	domain.MessageRepo = &getDBMock{}
+	getAllMessagesDomain  = func() ([]domain.Message, error_utils.MessageErr) {
+		return nil, error_utils.NewInternalServerError("error getting messages")
+	}
+	messages, err := MessagesService.GetAllMessages()
+	assert.NotNil(t, err)
+	assert.Nil(t, messages)
+	assert.EqualValues(t, http.StatusInternalServerError, err.Status())
+	assert.EqualValues(t, "error getting messages", err.Message())
+	assert.EqualValues(t, "server_error", err.Error())
+}
+///////////////////////////////////////////////////////////////
+// End of "GetAllMessage" test cases
+///////////////////////////////////////////////////////////////
