@@ -123,7 +123,7 @@ func (mr *messageRepo) Update(msg *Message) (*Message, error_utils.MessageErr) {
 	result, updateErr := stmt.Exec(msg.Title, msg.Body, msg.Id)
 	fmt.Println("this is the result: ", result)
 	if updateErr != nil {
-		return nil, error_utils.NewInternalServerError("error when trying to update message first")
+		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to update message first: %s", updateErr.Error()))
 	}
 	return msg, nil
 }
