@@ -4,6 +4,7 @@ import (
 	"efficient-api/domain"
 	"efficient-api/services"
 	"efficient-api/utils/error_utils"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -41,6 +42,7 @@ func GetAllMessages(c *gin.Context) {
 }
 
 func CreateMessage(c *gin.Context) {
+	fmt.Println("YOU ARE CALLED")
 	var message domain.Message
 	if err := c.ShouldBindJSON(&message); err != nil {
 		theErr := error_utils.NewUnprocessibleEntityError("invalid json body")

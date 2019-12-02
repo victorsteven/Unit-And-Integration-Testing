@@ -1,6 +1,7 @@
 package services
 
 import (
+	"database/sql"
 	"efficient-api/domain"
 	"efficient-api/utils/error_utils"
 	"fmt"
@@ -36,7 +37,9 @@ func (m *getDBMock) Delete(messageId int64) error_utils.MessageErr {
 func (m *getDBMock) GetAll() ([]domain.Message, error_utils.MessageErr) {
 	return getAllMessagesDomain()
 }
-func (m *getDBMock) Initialize(string, string, string, string, string, string){}
+func (m *getDBMock) Initialize(string, string, string, string, string, string) *sql.DB  {
+	return nil
+}
 
 
 ///////////////////////////////////////////////////////////////
