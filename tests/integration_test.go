@@ -40,10 +40,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Error getting env %v\n", err)
 	}
-	//dbConn()
-
-	Database()
-
 	os.Exit(m.Run())
 }
 
@@ -74,7 +70,6 @@ func Database() {
 
 	dbNow = domain.MessageRepo.Initialize(dbDriver, username, password, port, host, database)
 
-	//return db
 }
 
 func refreshUserTable() error {
@@ -94,11 +89,11 @@ func refreshUserTable() error {
 	return nil
 }
 
-func TestAde(t *testing.T) {
-	refreshUserTable()
-	//seedOneMessage()
-	//fmt.Println("this is the seed: ", msg)
-}
+//func TestAde(t *testing.T) {
+//	refreshUserTable()
+//	//seedOneMessage()
+//	//fmt.Println("this is the seed: ", msg)
+//}
 
 func seedOneMessage() (domain.Message, error) {
 	msg := domain.Message{
@@ -158,18 +153,20 @@ func seedOneMessage() (domain.Message, error) {
 //	return messages, nil
 //}
 
-func Add(x, y int64) int64 {
-	//fmt.Println("adding")
-	return x + y
-}
+//func Add(x, y int64) int64 {
+//	//fmt.Println("adding")
+//	return x + y
+//}
 
-func TestAdd(t *testing.T) {
-	ans := Add(2, 4)
-
-	fmt.Println("this is the ans", ans)
-}
+//func TestAdd(t *testing.T) {
+//	ans := Add(2, 4)
+//
+//	fmt.Println("this is the ans", ans)
+//}
 
 func TestCreateMessage(t *testing.T) {
+
+	Database()
 
 	gin.SetMode(gin.TestMode)
 
@@ -177,9 +174,6 @@ func TestCreateMessage(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println("TABLE REFRESHED")
-
 	samples := []struct {
 		inputJSON  string
 		statusCode int
@@ -199,10 +193,16 @@ func TestCreateMessage(t *testing.T) {
 			statusCode: 500,
 			errMessage: "title already taken",
 		},
-		//{
-		//	inputJSON:  `{"username":"Pet", "email": "grand@example.com", "password": "password"}`,
-		//	statusCode: 500,
-		//},
+		{
+			inputJSON:  `{"title":"", "body": "the body"}`,
+			statusCode: 422,
+			errMessage: "Please enter a valid title",
+		},
+		{
+			inputJSON:  `{"title":"the title", "body": ""}`,
+			statusCode: 422,
+			errMessage: "Please enter a valid body",
+		},
 		//{
 		//	inputJSON:  `{"username":"Kan", "email": "kanexample.com", "password": "password"}`,
 		//	statusCode: 422,
@@ -231,21 +231,19 @@ func TestCreateMessage(t *testing.T) {
 		rr := httptest.NewRecorder()
 		r.ServeHTTP(rr, req)
 
-		//var msg domain.Message
-
 		responseMap := make(map[string]interface{})
 		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 		if err != nil {
 			t.Errorf("Cannot convert to json: %v", err)
 		}
-		fmt.Println("this isthe response data: ", responseMap)
+		fmt.Println("this is the response data: ", responseMap)
 		assert.Equal(t, rr.Code, v.statusCode)
 		if v.statusCode == 201 {
 			//casting the interface to map:
 			assert.Equal(t, responseMap["title"], v.title)
 			assert.Equal(t, responseMap["body"], v.body)
 		}
-		if v.statusCode == 422 || v.statusCode == 500 && v.errMessage != "" {
+		if v.statusCode == 400 || v.statusCode == 422 || v.statusCode == 500 && v.errMessage != "" {
 			assert.Equal(t, responseMap["message"], v.errMessage)
 			//fmt.Println("this is the error message: ", responseMap)
 		}
