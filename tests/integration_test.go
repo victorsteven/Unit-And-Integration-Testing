@@ -22,16 +22,12 @@ import (
 )
 
 const (
-	queryGetMessage     = "SELECT id, title, body, created_at FROM messages WHERE id=?;"
+	queryTruncateMessage = "TRUNCATE TABLE messages;"
 	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
-	queryUpdateMessage  = "UPDATE messages SET title=?, body=? WHERE id=?;"
-	queryDeleteMessage  = "DELETE FROM messages WHERE id=?;"
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
 )
-
 var (
 	tm     = time.Now()
-	server = domain.Server{}
 	dbNow  *sql.DB
 )
 
@@ -41,8 +37,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Error getting env %v\n", err)
 	}
-
-
 	os.Exit(m.Run())
 }
 
@@ -76,7 +70,7 @@ func Database() {
 
 func refreshUserTable() error {
 
-	stmt, err := dbNow.Prepare("TRUNCATE TABLE messages;")
+	stmt, err := dbNow.Prepare(queryTruncateMessage)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -86,12 +80,6 @@ func refreshUserTable() error {
 	}
 	return nil
 }
-
-//func TestAde(t *testing.T) {
-//	refreshUserTable()
-//	//seedOneMessage()
-//	//fmt.Println("this is the seed: ", msg)
-//}
 
 func seedOneMessage() (domain.Message, error) {
 	msg := domain.Message{
@@ -115,51 +103,63 @@ func seedOneMessage() (domain.Message, error) {
 	return msg, nil
 }
 
-//func TestHello(t *testing.T) {
-//	message, err := seedOneMessage()
+func seedMessages() ([]domain.Message, error) {
+	msgs := []domain.Message{
+		{
+			Title:     "first title",
+			Body:      "first body",
+			CreatedAt: time.Now(),
+		},
+		{
+			Title:     "second title",
+			Body:      "second body",
+			CreatedAt: time.Now(),
+		},
+	}
+	stmt, err := dbNow.Prepare(queryInsertMessage)
+	if err != nil {
+		panic(err.Error())
+	}
+	for i, _ := range msgs {
+		_, createErr := stmt.Exec(msgs[i].Title, msgs[i].Body, msgs[i].CreatedAt)
+		if createErr != nil {
+			return nil, createErr
+		}
+	}
+	get_stmt, err := dbNow.Prepare(queryGetAllMessages)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+
+	rows, err := get_stmt.Query()
+	if err != nil {
+		return nil,  err
+	}
+	defer rows.Close()
+
+	results := make([]domain.Message, 0)
+
+	for rows.Next() {
+		var msg domain.Message
+		if getError := rows.Scan(&msg.Id, &msg.Title, &msg.Body, &msg.CreatedAt); getError != nil {
+			return nil, err
+		}
+		results = append(results, msg)
+	}
+	return results, nil
+}
+
+//func TestSeeding(t *testing.T) {
+//
+//	Database()
+//
+//	err := refreshUserTable()
 //	if err != nil {
-//		fmt.Println("error creating message: ", err)
+//		log.Fatal(err)
 //	}
-//	fmt.Println("this is the message created: ", message)
-//}
-
-//func seedMessages() ([]domain.Message, error) {
-//
-//	var err error
-//	if err != nil {
-//		return nil, err
-//	}
-//	messages := []domain.Message{
-//		domain.Message{
-//			Title:     "first title",
-//			Body:      "first the body",
-//			CreatedAt: time.Now(),
-//		},
-//		domain.Message{
-//			Title:     "second title",
-//			Body:      "second body",
-//			CreatedAt: time.Now(),
-//		},
-//	}
-//
-//	for i, _ := range messages {
-//		//err := server.DB.Model(&models.User{}).Create(&users[i]).Error
-//		//if err != nil {
-//		//	return []models.User{}, err
-//		//}
-//	}
-//	return messages, nil
-//}
-
-//func Add(x, y int64) int64 {
-//	//fmt.Println("adding")
-//	return x + y
-//}
-
-//func TestAdd(t *testing.T) {
-//	ans := Add(2, 4)
-//
-//	fmt.Println("this is the ans", ans)
+//	messages, _ := seedMessages()
+//	fmt.Println("these are the messages: ", messages)
 //}
 
 func TestCreateMessage(t *testing.T) {
@@ -314,7 +314,6 @@ func TestUpdateMessage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error while seeding table: %s", err)
 	}
-
 	samples := []struct {
 		id          string
 		inputJSON  string
@@ -357,7 +356,6 @@ func TestUpdateMessage(t *testing.T) {
 			errMessage: "no record matching given id",
 		},
 	}
-
 	for _, v := range samples {
 		r := gin.Default()
 		r.PUT("/messages/:message_id", controllers.UpdateMessage)
@@ -373,7 +371,6 @@ func TestUpdateMessage(t *testing.T) {
 		if err != nil {
 			t.Errorf("Cannot convert to json: %v", err)
 		}
-		fmt.Println("this is the response data: ", responseMap)
 		assert.Equal(t, rr.Code, v.statusCode)
 		if v.statusCode == 200 {
 			//casting the interface to map:
@@ -385,3 +382,39 @@ func TestUpdateMessage(t *testing.T) {
 		}
 	}
 }
+
+
+func TestGetAllMessage(t *testing.T) {
+
+	Database()
+
+	gin.SetMode(gin.TestMode)
+
+	err := refreshUserTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = seedMessages()
+	if err != nil {
+		t.Errorf("Error while seeding table: %s", err)
+	}
+	r := gin.Default()
+	r.GET("/messages", controllers.GetAllMessages)
+
+	req, err := http.NewRequest(http.MethodGet, "/messages", nil)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	var msgs []domain.Message
+
+	err = json.Unmarshal(rr.Body.Bytes(), &msgs)
+	if err != nil {
+		log.Fatalf("Cannot convert to json: %v\n", err)
+	}
+	assert.Equal(t, rr.Code, http.StatusOK)
+	assert.Equal(t, len(msgs), 2)
+}
+
