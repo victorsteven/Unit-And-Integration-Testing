@@ -17,8 +17,7 @@ const (
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
 )
 var (
-	tm     = time.Now()
-	dbNow  *sql.DB
+	dbConn  *sql.DB
 )
 
 func TestMain(m *testing.M) {
@@ -30,7 +29,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func Database() {
+func database() {
 	dbDriver := os.Getenv("DBDRIVER_TEST")
 	username := os.Getenv("USERNAME_TEST")
 	password := os.Getenv("PASSWORD_TEST")
@@ -38,12 +37,12 @@ func Database() {
 	database := os.Getenv("DATABASE_TEST")
 	port := os.Getenv("PORT_TEST")
 
-	dbNow = domain.MessageRepo.Initialize(dbDriver, username, password, port, host, database)
+	dbConn = domain.MessageRepo.Initialize(dbDriver, username, password, port, host, database)
 }
 
-func refreshUserTable() error {
+func refreshMessagesTable() error {
 
-	stmt, err := dbNow.Prepare(queryTruncateMessage)
+	stmt, err := dbConn.Prepare(queryTruncateMessage)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -60,7 +59,7 @@ func seedOneMessage() (domain.Message, error) {
 		Body:      "the body",
 		CreatedAt: time.Now(),
 	}
-	stmt, err := dbNow.Prepare(queryInsertMessage)
+	stmt, err := dbConn.Prepare(queryInsertMessage)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -89,7 +88,7 @@ func seedMessages() ([]domain.Message, error) {
 			CreatedAt: time.Now(),
 		},
 	}
-	stmt, err := dbNow.Prepare(queryInsertMessage)
+	stmt, err := dbConn.Prepare(queryInsertMessage)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -99,7 +98,7 @@ func seedMessages() ([]domain.Message, error) {
 			return nil, createErr
 		}
 	}
-	get_stmt, err := dbNow.Prepare(queryGetAllMessages)
+	get_stmt, err := dbConn.Prepare(queryGetAllMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -122,3 +121,4 @@ func seedMessages() ([]domain.Message, error) {
 	}
 	return results, nil
 }
+

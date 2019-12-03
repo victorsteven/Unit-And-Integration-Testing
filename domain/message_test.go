@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
-	_ "github.com/go-sql-driver/mysql" //THE REASON FOR THE IMPORT TO TEST THE INITIALIZE METHOD WHICH CONNECTS TO THE DATABASE
 	"reflect"
 	"testing"
 	"time"
@@ -22,7 +21,7 @@ func TestMessageRepo_Get(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		s       MessageRepoInterface
+		s       messageRepoInterface
 		msgId   int64
 		mock    func()
 		want    *Message
@@ -94,7 +93,7 @@ func TestMessageRepo_Create(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		s       MessageRepoInterface
+		s       messageRepoInterface
 		request *Message
 		mock    func()
 		want    *Message
@@ -185,7 +184,7 @@ func TestMessageRepo_Update(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		s       MessageRepoInterface
+		s       messageRepoInterface
 		request *Message
 		mock    func()
 		want    *Message
@@ -297,11 +296,10 @@ func TestMessageRepo_GetAll(t *testing.T) {
 	}
 	defer db.Close()
 	s := NewMessageRepository(db)
-	//var msgId int64
 
 	tests := []struct {
 		name    string
-		s       MessageRepoInterface
+		s       messageRepoInterface
 		msgId   int64
 		mock    func()
 		want    []Message
@@ -368,7 +366,7 @@ func TestMessageRepo_Delete(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		s       MessageRepoInterface
+		s       messageRepoInterface
 		msgId   int64
 		mock    func()
 		want    *Message

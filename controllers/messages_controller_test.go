@@ -11,11 +11,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 var (
-	tm = time.Now()
 	getMessageService func(msgId int64) (*domain.Message, error_utils.MessageErr)
 	createMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)
 	updateMessageService func(message *domain.Message) (*domain.Message, error_utils.MessageErr)

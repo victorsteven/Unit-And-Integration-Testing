@@ -36,3 +36,4 @@ func StartApp() {
 
 	router.Run(":8080")
 }
+

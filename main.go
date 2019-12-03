@@ -9,3 +9,4 @@ func main() {
 	fmt.Println("Welcome to the app")
 	app.StartApp()
 }
+

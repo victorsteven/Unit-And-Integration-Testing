@@ -8,7 +8,4 @@ func routes() {
 	router.POST("/messages", controllers.CreateMessage)
 	router.PUT("/messages/:message_id", controllers.UpdateMessage)
 	router.DELETE("/messages/:message_id", controllers.DeleteMessage)
-
-
-	//router.GET("/ping", controllers.Ping)
 }

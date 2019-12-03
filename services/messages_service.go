@@ -78,3 +78,4 @@ func (m *messagesService) DeleteMessage(msgId int64) error_utils.MessageErr {
 	}
 	return nil
 }
+

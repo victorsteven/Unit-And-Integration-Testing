@@ -4,12 +4,12 @@ import (
 	"efficient-api/domain"
 	"efficient-api/services"
 	"efficient-api/utils/error_utils"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
+//Since we are going for the message id more than we, we extracted this functionality to a function so we can have a DRY code.
 func getMessageId(msgIdParam string) (int64, error_utils.MessageErr) {
 	msgId, msgErr := strconv.ParseInt(msgIdParam, 10, 64)
 	if msgErr != nil {
@@ -42,7 +42,6 @@ func GetAllMessages(c *gin.Context) {
 }
 
 func CreateMessage(c *gin.Context) {
-	fmt.Println("YOU ARE CALLED")
 	var message domain.Message
 	if err := c.ShouldBindJSON(&message); err != nil {
 		theErr := error_utils.NewUnprocessibleEntityError("invalid json body")
@@ -91,6 +90,3 @@ func DeleteMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-//func Ping(c *gin.Context) {
-//	c.JSON(http.StatusOK, "This is the route")
-//}

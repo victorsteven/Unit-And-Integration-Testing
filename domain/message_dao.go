@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	MessageRepo MessageRepoInterface = &messageRepo{}
+	MessageRepo messageRepoInterface = &messageRepo{}
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
 )
 
-type MessageRepoInterface interface {
+type messageRepoInterface interface {
 	Get(int64) (*Message, error_utils.MessageErr)
 	Create(*Message) (*Message, error_utils.MessageErr)
 	Update(*Message) (*Message, error_utils.MessageErr)
@@ -46,7 +46,7 @@ func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, 
 	return mr.db
 }
 
-func NewMessageRepository(db *sql.DB) MessageRepoInterface {
+func NewMessageRepository(db *sql.DB) messageRepoInterface {
 	return &messageRepo{db: db}
 }
 

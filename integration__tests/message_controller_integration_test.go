@@ -17,11 +17,11 @@ import (
 
 func TestCreateMessage(t *testing.T) {
 
-	Database()
+	database()
 
 	gin.SetMode(gin.TestMode)
 
-	err := refreshUserTable()
+	err := refreshMessagesTable()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,11 +97,11 @@ func TestCreateMessage(t *testing.T) {
 
 func TestGetMessageByID(t *testing.T) {
 
-	Database()
+	database()
 
 	gin.SetMode(gin.TestMode)
 
-	err := refreshUserTable()
+	err := refreshMessagesTable()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -165,11 +165,11 @@ func TestGetMessageByID(t *testing.T) {
 
 func TestUpdateMessage(t *testing.T) {
 
-	Database()
+	database()
 
 	gin.SetMode(gin.TestMode)
 
-	err := refreshUserTable()
+	err := refreshMessagesTable()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -273,11 +273,11 @@ func TestUpdateMessage(t *testing.T) {
 
 func TestGetAllMessage(t *testing.T) {
 
-	Database()
+	database()
 
 	gin.SetMode(gin.TestMode)
 
-	err := refreshUserTable()
+	err := refreshMessagesTable()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -307,11 +307,11 @@ func TestGetAllMessage(t *testing.T) {
 
 func TestDeleteMessage(t *testing.T) {
 
-	Database()
+	database()
 
 	gin.SetMode(gin.TestMode)
 
-	err := refreshUserTable()
+	err := refreshMessagesTable()
 	if err != nil {
 		log.Fatal(err)
 	}
