@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -40,6 +41,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Error getting env %v\n", err)
 	}
+
+
 	os.Exit(m.Run())
 }
 
@@ -69,12 +72,9 @@ func Database() {
 	port := os.Getenv("PORT_TEST")
 
 	dbNow = domain.MessageRepo.Initialize(dbDriver, username, password, port, host, database)
-
 }
 
 func refreshUserTable() error {
-
-	//dbCn := Database()
 
 	stmt, err := dbNow.Prepare("TRUNCATE TABLE messages;")
 	if err != nil {
@@ -84,8 +84,6 @@ func refreshUserTable() error {
 	if err != nil {
 		log.Fatalf("Error truncating messages table: %s", err)
 	}
-	//To avoid
-	//defer db.Close()
 	return nil
 }
 
@@ -101,7 +99,7 @@ func seedOneMessage() (domain.Message, error) {
 		Body:      "the body",
 		CreatedAt: time.Now(),
 	}
-	stmt, err := server.DB.Prepare(queryInsertMessage)
+	stmt, err := dbNow.Prepare(queryInsertMessage)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -203,22 +201,6 @@ func TestCreateMessage(t *testing.T) {
 			statusCode: 422,
 			errMessage: "Please enter a valid body",
 		},
-		//{
-		//	inputJSON:  `{"username":"Kan", "email": "kanexample.com", "password": "password"}`,
-		//	statusCode: 422,
-		//},
-		//{
-		//	inputJSON:  `{"username": "", "email": "kan@example.com", "password": "password"}`,
-		//	statusCode: 422,
-		//},
-		//{
-		//	inputJSON:  `{"username": "Kan", "email": "", "password": "password"}`,
-		//	statusCode: 422,
-		//},
-		//{
-		//	inputJSON:  `{"username": "Kan", "email": "kan@example.com", "password": ""}`,
-		//	statusCode: 422,
-		//},
 	}
 
 	for _, v := range samples {
@@ -245,30 +227,161 @@ func TestCreateMessage(t *testing.T) {
 		}
 		if v.statusCode == 400 || v.statusCode == 422 || v.statusCode == 500 && v.errMessage != "" {
 			assert.Equal(t, responseMap["message"], v.errMessage)
-			//fmt.Println("this is the error message: ", responseMap)
 		}
+	}
+}
 
-		//if v.statusCode == 422 || v.statusCode == 500 {
-		//	responseMap := responseInterface["error"].(map[string]interface{})
-		//
-		//	if responseMap["Taken_email"] != nil {
-		//		assert.Equal(t, responseMap["Taken_email"], "Email Already Taken")
-		//	}
-		//	if responseMap["Taken_username"] != nil {
-		//		assert.Equal(t, responseMap["Taken_username"], "Username Already Taken")
-		//	}
-		//	if responseMap["Invalid_email"] != nil {
-		//		assert.Equal(t, responseMap["Invalid_email"], "Invalid Email")
-		//	}
-		//	if responseMap["Required_username"] != nil {
-		//		assert.Equal(t, responseMap["Required_username"], "Required Username")
-		//	}
-		//	if responseMap["Required_email"] != nil {
-		//		assert.Equal(t, responseMap["Required_email"], "Required Email")
-		//	}
-		//	if responseMap["Required_password"] != nil {
-		//		assert.Equal(t, responseMap["Required_password"], "Required Password")
-		//	}
-		//}
+func TestGetMessageByID(t *testing.T) {
+
+	Database()
+
+	gin.SetMode(gin.TestMode)
+
+	err := refreshUserTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	message, err := seedOneMessage()
+	if err != nil {
+		t.Errorf("Error while seeding table: %s", err)
+	}
+	samples := []struct {
+		id         string
+		statusCode int
+		title      string
+		body       string
+		errMessage string
+	}{
+		{
+			id:         strconv.Itoa(int(message.Id)),
+			statusCode: 200,
+			title:   message.Title,
+			body:     message.Body,
+			errMessage: "",
+		},
+		{
+			id:         "unknwon",
+			statusCode: 400,
+			errMessage: "message id should be a number",
+		},
+		{
+			id:         strconv.Itoa(12322), //an id that does not exist
+			statusCode: 404,
+			errMessage: "no record matching given id",
+		},
+	}
+	for _, v := range samples {
+		r := gin.Default()
+		r.GET("/messages/:message_id", controllers.GetMessage)
+		req, err := http.NewRequest(http.MethodGet, "/messages/"+v.id, nil)
+		if err != nil {
+			t.Errorf("this is the error: %v\n", err)
+		}
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		responseMap := make(map[string]interface{})
+		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+		if err != nil {
+			t.Errorf("Cannot convert to json: %v", err)
+		}
+		//fmt.Println("this is the response data: ", responseMap)
+		assert.Equal(t, rr.Code, v.statusCode)
+
+		if v.statusCode == 200 {
+			//casting the interface to map:
+			assert.Equal(t, responseMap["title"], v.title)
+			assert.Equal(t, responseMap["body"], v.body)
+		}
+		if v.statusCode == 400 || v.statusCode == 422 && v.errMessage != "" {
+			assert.Equal(t, responseMap["message"], v.errMessage)
+		}
+	}
+}
+
+func TestUpdateMessage(t *testing.T) {
+
+	Database()
+
+	gin.SetMode(gin.TestMode)
+
+	err := refreshUserTable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	message, err := seedOneMessage()
+	fmt.Println("this is the error: ", message)
+	if err != nil {
+		t.Errorf("Error while seeding table: %s", err)
+	}
+
+	samples := []struct {
+		id          string
+		inputJSON  string
+		statusCode int
+		title      string
+		body       string
+		errMessage string
+	}{
+		{
+			id:          strconv.Itoa(int(message.Id)),
+			inputJSON:  `{"title":"update title", "body": "update body"}`,
+			statusCode: 200,
+			title:      "update title",
+			body:       "update body",
+			errMessage: "",
+		},
+		{
+			//Empty title
+			id:          strconv.Itoa(int(message.Id)),
+			inputJSON:  `{"title":"", "body": "update body"}`,
+			statusCode: 422,
+			errMessage: "Please enter a valid title",
+		},
+		{
+			//Empty title
+			id:          strconv.Itoa(int(message.Id)),
+			inputJSON:  `{"title":"the title", "body": ""}`,
+			statusCode: 422,
+			errMessage: "Please enter a valid body",
+		},
+		{
+			id:         "unknwon",
+			statusCode: 400,
+			errMessage: "message id should be a number",
+		},
+		{
+			id:         strconv.Itoa(12322), //an id that does not exist
+			inputJSON:  `{"title":"the title", "body": "the body"}`,
+			statusCode: 404,
+			errMessage: "no record matching given id",
+		},
+	}
+
+	for _, v := range samples {
+		r := gin.Default()
+		r.PUT("/messages/:message_id", controllers.UpdateMessage)
+		req, err := http.NewRequest(http.MethodPut, "/messages/"+v.id, bytes.NewBufferString(v.inputJSON))
+		if err != nil {
+			t.Errorf("this is the error: %v\n", err)
+		}
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		responseMap := make(map[string]interface{})
+		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+		if err != nil {
+			t.Errorf("Cannot convert to json: %v", err)
+		}
+		fmt.Println("this is the response data: ", responseMap)
+		assert.Equal(t, rr.Code, v.statusCode)
+		if v.statusCode == 200 {
+			//casting the interface to map:
+			assert.Equal(t, responseMap["title"], v.title)
+			assert.Equal(t, responseMap["body"], v.body)
+		}
+		if v.statusCode == 400 || v.statusCode == 422 || v.statusCode == 500 && v.errMessage != "" {
+			assert.Equal(t, responseMap["message"], v.errMessage)
+		}
 	}
 }

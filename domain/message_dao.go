@@ -61,7 +61,9 @@ func (mr *Server) Get(messageId int64) (*Message, error_utils.MessageErr) {
 	var msg Message
 	result := stmt.QueryRow(messageId)
 	if getError := result.Scan(&msg.Id, &msg.Title, &msg.Body, &msg.CreatedAt); getError != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to get message: %s", getError.Error()))
+		fmt.Println("this is the error man: ", getError)
+		return nil,  error_formats.ParseError(getError)
+		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to get message: %s", getError.Error()))
 	}
 	return &msg, nil
 }
@@ -75,7 +77,8 @@ func (mr *Server) GetAll() ([]Message, error_utils.MessageErr) {
 
 	rows, err := stmt.Query()
 	if err != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to get users: %s", err.Error()))
+		return nil,  error_formats.ParseError(err)
+		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to get users: %s", err.Error()))
 	}
 	defer rows.Close()
 
@@ -125,10 +128,10 @@ func (mr *Server) Update(msg *Message) (*Message, error_utils.MessageErr) {
 	}
 	defer stmt.Close()
 
-	result, updateErr := stmt.Exec(msg.Title, msg.Body, msg.Id)
-	fmt.Println("this is the result: ", result)
+	_, updateErr := stmt.Exec(msg.Title, msg.Body, msg.Id)
 	if updateErr != nil {
-		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to update message first: %s", updateErr.Error()))
+		return nil,  error_formats.ParseError(updateErr)
+		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to update message first: %s", updateErr.Error()))
 	}
 	return msg, nil
 }
