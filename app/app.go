@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	//server = messages_db.Server{}
 	router = gin.Default()
 )
 

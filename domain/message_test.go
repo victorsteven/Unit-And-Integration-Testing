@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DATA-DOG/go-sqlmock"
+	_ "github.com/go-sql-driver/mysql" //THE REASON FOR THE IMPORT TO TEST THE INITIALIZE METHOD WHICH CONNECTS TO THE DATABASE
 	"reflect"
 	"testing"
 	"time"
 )
 
 var created_at = time.Now()
-
 
 func TestMessageRepo_Get(t *testing.T) {
 	db, mock, err := sqlmock.New()
@@ -168,11 +168,6 @@ func TestMessageRepo_Create(t *testing.T) {
 				t.Errorf("Create() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if err != nil {
-				fmt.Println("this is the generic error: ", err.Message())
-				fmt.Println("this is the generic error status: ", err.Status())
-				fmt.Println("this is the generic error error: ", err.Error())
-			}
 			if err == nil && !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Create() = %v, want %v", got, tt.want)
 			}
@@ -187,7 +182,6 @@ func TestMessageRepo_Update(t *testing.T) {
 	}
 	defer db.Close()
 	s := NewMessageRepository(db)
-	//tm := time.Now()
 
 	tests := []struct {
 		name    string
@@ -348,15 +342,6 @@ func TestMessageRepo_GetAll(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name:  "Fetch Failure",
-			s:     s,
-			mock: func() {
-				//rows := sqlmock.NewRows([]string{"Id", "Title", "Bodyaa"}) //observe that we didnt add any role here
-				mock.ExpectPrepare("SELECT (.+) FROM messages").ExpectQuery().WillReturnError(errors.New("this is the error"))
-			},
-			wantErr: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -426,11 +411,19 @@ func TestMessageRepo_Delete(t *testing.T) {
 				t.Errorf("Delete() error new = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if err != nil {
-				fmt.Println("this is the generic error: ", err.Message())
-				fmt.Println("this is the generic error status: ", err.Status())
-				fmt.Println("this is the generic error error: ", err.Error())
-			}
 		})
 	}
+}
+
+//When the right number of arguments are passed
+//This test is just to improve coverage
+func TestMessageRepo_Initialize(t *testing.T) {
+	dbdriver :=  "mysql"
+	username := "username"
+	password := "password"
+	host := "host"
+	database := "database"
+	port := "port"
+	dbConnect := MessageRepo.Initialize(dbdriver, username, password, port, host, database)
+	fmt.Println("this is the pool: ", dbConnect)
 }

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	MessageRepo MessageRepoInterface = &Server{}
+	MessageRepo MessageRepoInterface = &messageRepo{}
 )
 
 const (
@@ -29,30 +29,29 @@ type MessageRepoInterface interface {
 	GetAll() ([]Message, error_utils.MessageErr)
 	Initialize(string, string, string, string, string, string) *sql.DB
 }
-type Server struct {
-	DB *sql.DB
+type messageRepo struct {
+	db *sql.DB
 }
 
-func (mr *Server) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) *sql.DB  {
+func (mr *messageRepo) Initialize(Dbdriver, DbUser, DbPassword, DbPort, DbHost, DbName string) *sql.DB  {
 	var err error
 	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
 
-	mr.DB, err = sql.Open(Dbdriver, DBURL)
+	mr.db, err = sql.Open(Dbdriver, DBURL)
 	if err != nil {
-		fmt.Printf("Cannot connect to %s database", Dbdriver)
-		log.Fatal("This is the error connecting to postgres:", err)
+		log.Fatal("This is the error connecting to the database:", err)
 	}
 	fmt.Printf("We are connected to the %s database", Dbdriver)
 
-	return mr.DB
+	return mr.db
 }
 
 func NewMessageRepository(db *sql.DB) MessageRepoInterface {
-	return &Server{DB: db}
+	return &messageRepo{db: db}
 }
 
-func (mr *Server) Get(messageId int64) (*Message, error_utils.MessageErr) {
-	stmt, err := mr.DB.Prepare(queryGetMessage)
+func (mr *messageRepo) Get(messageId int64) (*Message, error_utils.MessageErr) {
+	stmt, err := mr.db.Prepare(queryGetMessage)
 	if err != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to prepare message: %s", err.Error()))
 	}
@@ -63,13 +62,12 @@ func (mr *Server) Get(messageId int64) (*Message, error_utils.MessageErr) {
 	if getError := result.Scan(&msg.Id, &msg.Title, &msg.Body, &msg.CreatedAt); getError != nil {
 		fmt.Println("this is the error man: ", getError)
 		return nil,  error_formats.ParseError(getError)
-		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to get message: %s", getError.Error()))
 	}
 	return &msg, nil
 }
 
-func (mr *Server) GetAll() ([]Message, error_utils.MessageErr) {
-	stmt, err := mr.DB.Prepare(queryGetAllMessages)
+func (mr *messageRepo) GetAll() ([]Message, error_utils.MessageErr) {
+	stmt, err := mr.db.Prepare(queryGetAllMessages)
 	if err != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("Error when trying to prepare all messages: %s", err.Error()))
 	}
@@ -78,7 +76,6 @@ func (mr *Server) GetAll() ([]Message, error_utils.MessageErr) {
 	rows, err := stmt.Query()
 	if err != nil {
 		return nil,  error_formats.ParseError(err)
-		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to get users: %s", err.Error()))
 	}
 	defer rows.Close()
 
@@ -97,9 +94,9 @@ func (mr *Server) GetAll() ([]Message, error_utils.MessageErr) {
 	return results, nil
 }
 
-func (mr *Server) Create(msg *Message) (*Message, error_utils.MessageErr) {
+func (mr *messageRepo) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	fmt.Println("WE REACHED THE DOMAIN")
-	stmt, err := mr.DB.Prepare(queryInsertMessage)
+	stmt, err := mr.db.Prepare(queryInsertMessage)
 	if err != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to prepare user to save: %s", err.Error()))
 	}
@@ -110,7 +107,6 @@ func (mr *Server) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	insertResult, createErr := stmt.Exec(msg.Title, msg.Body, msg.CreatedAt)
 	if createErr != nil {
 		return nil,  error_formats.ParseError(createErr)
-		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to save message: %s", createErr.Error()))
 	}
 	msgId, err := insertResult.LastInsertId()
 	if err != nil {
@@ -121,8 +117,8 @@ func (mr *Server) Create(msg *Message) (*Message, error_utils.MessageErr) {
 	return msg, nil
 }
 
-func (mr *Server) Update(msg *Message) (*Message, error_utils.MessageErr) {
-	stmt, err := mr.DB.Prepare(queryUpdateMessage)
+func (mr *messageRepo) Update(msg *Message) (*Message, error_utils.MessageErr) {
+	stmt, err := mr.db.Prepare(queryUpdateMessage)
 	if err != nil {
 		return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to prepare user to update: %s", err.Error()))
 	}
@@ -131,13 +127,12 @@ func (mr *Server) Update(msg *Message) (*Message, error_utils.MessageErr) {
 	_, updateErr := stmt.Exec(msg.Title, msg.Body, msg.Id)
 	if updateErr != nil {
 		return nil,  error_formats.ParseError(updateErr)
-		//return nil, error_utils.NewInternalServerError(fmt.Sprintf("error when trying to update message first: %s", updateErr.Error()))
 	}
 	return msg, nil
 }
 
-func (mr *Server) Delete(msgId int64) error_utils.MessageErr {
-	stmt, err := mr.DB.Prepare(queryDeleteMessage)
+func (mr *messageRepo) Delete(msgId int64) error_utils.MessageErr {
+	stmt, err := mr.db.Prepare(queryDeleteMessage)
 	if err != nil {
 		fmt.Println("this is the delete error: ", err)
 		return error_utils.NewInternalServerError(fmt.Sprintf("error when trying to delete message: %s", err.Error()))
