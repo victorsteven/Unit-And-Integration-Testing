@@ -1,166 +1,19 @@
-package tests
+package integration__tests
 
 import (
 	"bytes"
-	"database/sql"
 	"efficient-api/controllers"
 	"efficient-api/domain"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"testing"
-	"time"
-
-	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/assert"
 )
-
-const (
-	queryTruncateMessage = "TRUNCATE TABLE messages;"
-	queryInsertMessage  = "INSERT INTO messages(title, body, created_at) VALUES(?, ?, ?);"
-	queryGetAllMessages = "SELECT id, title, body, created_at FROM messages;"
-)
-var (
-	tm     = time.Now()
-	dbNow  *sql.DB
-)
-
-func TestMain(m *testing.M) {
-	var err error
-	err = godotenv.Load(os.ExpandEnv("./../.env"))
-	if err != nil {
-		log.Fatalf("Error getting env %v\n", err)
-	}
-	os.Exit(m.Run())
-}
-
-// func dbConn()   {
-// 	var err error
-// 	dbdriver := os.Getenv("DBDRIVER_TEST")
-// 	username := os.Getenv("USERNAME_TEST")
-// 	password := os.Getenv("PASSWORD_TEST")
-// 	host := os.Getenv("HOST_TEST")
-// 	database := os.Getenv("DATABASE_TEST")
-// 	port := os.Getenv("PORT_TEST")
-
-// 	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", username, password, host, port, database)
-
-// 	server.DB, err = sql.Open(dbdriver, DBURL)
-// 	if err != nil {
-// 		panic(err.Error())
-// 	}
-// }
-
-func Database() {
-	dbDriver := os.Getenv("DBDRIVER_TEST")
-	username := os.Getenv("USERNAME_TEST")
-	password := os.Getenv("PASSWORD_TEST")
-	host := os.Getenv("HOST_TEST")
-	database := os.Getenv("DATABASE_TEST")
-	port := os.Getenv("PORT_TEST")
-
-	dbNow = domain.MessageRepo.Initialize(dbDriver, username, password, port, host, database)
-}
-
-func refreshUserTable() error {
-
-	stmt, err := dbNow.Prepare(queryTruncateMessage)
-	if err != nil {
-		panic(err.Error())
-	}
-	_, err = stmt.Exec()
-	if err != nil {
-		log.Fatalf("Error truncating messages table: %s", err)
-	}
-	return nil
-}
-
-func seedOneMessage() (domain.Message, error) {
-	msg := domain.Message{
-		Title:     "the title",
-		Body:      "the body",
-		CreatedAt: time.Now(),
-	}
-	stmt, err := dbNow.Prepare(queryInsertMessage)
-	if err != nil {
-		panic(err.Error())
-	}
-	insertResult, createErr := stmt.Exec(msg.Title, msg.Body, msg.CreatedAt)
-	if createErr != nil {
-		log.Fatalf("Error creating message: %s", createErr)
-	}
-	msgId, err := insertResult.LastInsertId()
-	if err != nil {
-		log.Fatalf("Error creating message: %s", createErr)
-	}
-	msg.Id = msgId
-	return msg, nil
-}
-
-func seedMessages() ([]domain.Message, error) {
-	msgs := []domain.Message{
-		{
-			Title:     "first title",
-			Body:      "first body",
-			CreatedAt: time.Now(),
-		},
-		{
-			Title:     "second title",
-			Body:      "second body",
-			CreatedAt: time.Now(),
-		},
-	}
-	stmt, err := dbNow.Prepare(queryInsertMessage)
-	if err != nil {
-		panic(err.Error())
-	}
-	for i, _ := range msgs {
-		_, createErr := stmt.Exec(msgs[i].Title, msgs[i].Body, msgs[i].CreatedAt)
-		if createErr != nil {
-			return nil, createErr
-		}
-	}
-	get_stmt, err := dbNow.Prepare(queryGetAllMessages)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	rows, err := get_stmt.Query()
-	if err != nil {
-		return nil,  err
-	}
-	defer rows.Close()
-
-	results := make([]domain.Message, 0)
-
-	for rows.Next() {
-		var msg domain.Message
-		if getError := rows.Scan(&msg.Id, &msg.Title, &msg.Body, &msg.CreatedAt); getError != nil {
-			return nil, err
-		}
-		results = append(results, msg)
-	}
-	return results, nil
-}
-
-//func TestSeeding(t *testing.T) {
-//
-//	Database()
-//
-//	err := refreshUserTable()
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	messages, _ := seedMessages()
-//	fmt.Println("these are the messages: ", messages)
-//}
 
 func TestCreateMessage(t *testing.T) {
 
@@ -297,7 +150,6 @@ func TestGetMessageByID(t *testing.T) {
 		if err != nil {
 			t.Errorf("Cannot convert to json: %v", err)
 		}
-		//fmt.Println("this is the response data: ", responseMap)
 		assert.Equal(t, rr.Code, v.statusCode)
 
 		if v.statusCode == 200 {
@@ -313,9 +165,6 @@ func TestGetMessageByID(t *testing.T) {
 
 func TestUpdateMessage(t *testing.T) {
 
-	//var firstTitle, firstBody string
-	var firstId int64
-
 	Database()
 
 	gin.SetMode(gin.TestMode)
@@ -329,15 +178,8 @@ func TestUpdateMessage(t *testing.T) {
 		t.Errorf("Error while seeding table: %s", err)
 	}
 
-	//Get only the first message
-	for _, message := range messages {
-		if message.Id == 2 {
-			continue
-		}
-		//firstTitle = message.Title
-		//firstBody = message.Body
-		firstId = message.Id
-	}
+	//Get only the first message id
+	firstId := messages[0].Id
 
 	samples := []struct {
 		id          string

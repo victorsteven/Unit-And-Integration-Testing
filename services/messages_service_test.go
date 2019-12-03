@@ -157,7 +157,7 @@ func TestMessagesService_CreateMessage_Invalid_Request(t *testing.T) {
 
 //We mock the "Get" method in the domain here. What could go wrong?,
 //Since the title of the message must be unique, an error must be thrown,
-//Of course you can also mock when the sql query is wrong, etc(these where covered in the domain tests),
+//Of course you can also mock when the sql query is wrong, etc(these where covered in the domain integration__tests),
 //For now, we have 100% coverage on the "CreateMessage" method in the service
 func TestMessagesService_CreateMessage_Failure(t *testing.T) {
 	domain.MessageRepo = &getDBMock{}
