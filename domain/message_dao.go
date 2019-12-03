@@ -134,13 +134,11 @@ func (mr *messageRepo) Update(msg *Message) (*Message, error_utils.MessageErr) {
 func (mr *messageRepo) Delete(msgId int64) error_utils.MessageErr {
 	stmt, err := mr.db.Prepare(queryDeleteMessage)
 	if err != nil {
-		fmt.Println("this is the delete error: ", err)
 		return error_utils.NewInternalServerError(fmt.Sprintf("error when trying to delete message: %s", err.Error()))
 	}
 	defer stmt.Close()
 
 	if _, err := stmt.Exec(msgId); err != nil {
-		fmt.Println("this is the second delete error: ", err)
 		return error_utils.NewInternalServerError(fmt.Sprintf("error when trying to delete message %s", err.Error()))
 	}
 	return nil
